@@ -5,7 +5,7 @@ from bili_font_secret import Decrypt
 import novel_image
 
 
-def run(playwright: Playwright,link,bookname) -> None:
+def run(playwright: Playwright,link,bookname,skip = 0,skip_page = 0) -> None:
     os.makedirs(bookname, exist_ok=True)
     decrypt = Decrypt()
     browser = playwright.chromium.launch(headless=False)
@@ -56,7 +56,8 @@ def run(playwright: Playwright,link,bookname) -> None:
     
 
     for b in range(0,len(booktitles)):
-
+        if b < skip:
+            continue
 
         directory = str(booktitles[b])
         folder = os.path.join(bookname,directory)
@@ -65,24 +66,26 @@ def run(playwright: Playwright,link,bookname) -> None:
 
         os.makedirs(folder, exist_ok=True)
         os.makedirs(os.path.join(folder,'images'), exist_ok=True)
-        novel_image.downloader(coverlinks[b],os.path.join(folder,'cover.'+coverlinks[b].split('.')[-1])).download()
-        print('downloaded cover',coverlinks[b])
+        if not 'no-cover' in coverlinks[b]:
+            novel_image.downloader(coverlinks[b],os.path.join(folder,'cover.'+coverlinks[b].split('.')[-1])).download()
+            print('downloaded cover',coverlinks[b])
 
+
+        nextchapterlink = ''
         for i in range(0,len(titles[b])):
+            if i < skip_page:
+                continue
             href = allhrefs[b][i]
             title = titles[b][i]
             print(href,title)
 
             if 'javascript' in href:
-                continue
+                href = nextchapterlink
             page.goto("https://www.linovelib.com"+href)
-            image_elements = page.locator("xpath=/html/body/div[2]/div[3]/div/img").all()
-            print(len(image_elements))
-            for image in image_elements:
-                image.scroll_into_view_if_needed()
-                page.wait_for_timeout(500)
+            page.wait_for_timeout(500)
 
-            page.wait_for_timeout(1500)
+
+            # page.wait_for_timeout(1500)
             # title = page.locator("xpath=/html/body/div[2]/div[3]/div/h1").all()
             # print(title)
             string = ''
@@ -95,6 +98,15 @@ def run(playwright: Playwright,link,bookname) -> None:
             # os.makedirs(folder, exist_ok=True)
             # os.makedirs(os.path.join(folder,'images'), exist_ok=True)
             while(True):
+                
+                image_elements = page.locator("xpath=/html/body/div[2]/div[3]/div/img").all()
+                print(len(image_elements))
+                for image in image_elements:
+                    image.scroll_into_view_if_needed()
+                    print(image.evaluate('el => el.outerHTML'))
+                    page.wait_for_timeout(1000)
+
+
                 pages += 1
                 content = page.locator("xpath=/html/body/div[2]/div[3]/div").nth(0)
                 content = content.locator("xpath=./p|./img").all()
@@ -102,6 +114,8 @@ def run(playwright: Playwright,link,bookname) -> None:
                 flag = False
                 if page.locator('text="下一页"').is_visible():
                     flag = True
+                if page.locator('text="下一章"').is_visible():
+                    nextchapterlink = page.locator('text="下一章"').get_attribute('href')
                 leng = len(content)
                 
                 for index,c in enumerate(content):
@@ -152,4 +166,4 @@ def run(playwright: Playwright,link,bookname) -> None:
 
 
 with sync_playwright() as playwright:
-    run(playwright,'https://www.linovelib.com/novel/2680/catalog','eva anima')
+    run(playwright,'https://www.linovelib.com/novel/3095/catalog','败北女角太多了!',1)

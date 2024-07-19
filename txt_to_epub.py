@@ -3,6 +3,7 @@ from ebooklib import epub
 import os
 import glob
 import re
+import sys
 
 import imghdr
 
@@ -86,8 +87,13 @@ def create_epub_from_txt(txt_files, output_file,bookdir,image_folder):
     epub.write_epub(output_file, book, {})
 
 if __name__ == '__main__':
+    
 
-    bookdir = 'eva anima'
+    bookdir = ''
+    if len(sys.argv) > 1:
+        bookdir = sys.argv[1]
+    else:
+        bookdir = 'temp'
     file_pattern = os.path.join(bookdir, '*')
     books = glob.glob(file_pattern)
     books.sort(key=os.path.getmtime)
