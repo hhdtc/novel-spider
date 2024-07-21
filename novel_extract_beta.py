@@ -3,6 +3,7 @@ from playwright.sync_api import Playwright, sync_playwright, expect
 import os
 from bili_font_secret import Decrypt
 import novel_image
+import sys
 
 
 def run(playwright: Playwright,link,bookname,skip = 0,skip_page = 0) -> None:
@@ -14,6 +15,8 @@ def run(playwright: Playwright,link,bookname,skip = 0,skip_page = 0) -> None:
     page.goto(link)
     page.wait_for_timeout(1000)
     l = page.locator("xpath=/html/body/div[2]/div[3]/div[3]/div").all()
+    if len(l) == 0:
+        l = page.locator("xpath=/html/body/div[2]/div[3]/div[4]/div").all()
     # print(l)
     allhrefs = []
     booktitles = []
@@ -31,6 +34,7 @@ def run(playwright: Playwright,link,bookname,skip = 0,skip_page = 0) -> None:
             imagelink.scroll_into_view_if_needed()
             page.wait_for_timeout(500)
             image_url = imagelink.get_attribute("src")
+            print('cover-url',image_url)
             coverlinks.append(image_url)
 
 
@@ -55,6 +59,8 @@ def run(playwright: Playwright,link,bookname,skip = 0,skip_page = 0) -> None:
 
     
 
+
+    nextchapterlink = ''
     for b in range(0,len(booktitles)):
         if b < skip:
             continue
@@ -68,12 +74,12 @@ def run(playwright: Playwright,link,bookname,skip = 0,skip_page = 0) -> None:
         os.makedirs(os.path.join(folder,'images'), exist_ok=True)
         if not 'no-cover' in coverlinks[b]:
             novel_image.downloader(coverlinks[b],os.path.join(folder,'cover.'+coverlinks[b].split('.')[-1])).download()
-            print('downloaded cover',coverlinks[b])
+            # print('downloaded cover',coverlinks[b])
 
 
-        nextchapterlink = ''
+        
         for i in range(0,len(titles[b])):
-            if i < skip_page:
+            if b == skip and i < skip_page:
                 continue
             href = allhrefs[b][i]
             title = titles[b][i]
@@ -100,10 +106,10 @@ def run(playwright: Playwright,link,bookname,skip = 0,skip_page = 0) -> None:
             while(True):
                 
                 image_elements = page.locator("xpath=/html/body/div[2]/div[3]/div/img").all()
-                print(len(image_elements))
+                # print(len(image_elements))
                 for image in image_elements:
                     image.scroll_into_view_if_needed()
-                    print(image.evaluate('el => el.outerHTML'))
+                    # print(image.evaluate('el => el.outerHTML'))
                     page.wait_for_timeout(1000)
 
 
@@ -123,11 +129,15 @@ def run(playwright: Playwright,link,bookname,skip = 0,skip_page = 0) -> None:
                     if tagName == 'img':
                         # Use Playwright to download the image
                         image_url = c.get_attribute("src")
-                        print(image_url)
+                        image_url_data_src = c.get_attribute("data-src")
+                        print('image_url',image_url)
+                        print('image_url_data_src',image_url_data_src)
+                        if '.svg' in image_url:
+                            image_url = image_url_data_src
                         save_path =  os.path.join(folder,'images',image_url.split('/')[-1])
                         novel_image.downloader(image_url,save_path).download()
                         
-                        print("Image downloaded successfully.")
+                        # print("Image downloaded successfully.")
 
                         raw_html = c.evaluate('el => el.outerHTML')
                         print(raw_html)
@@ -164,6 +174,14 @@ def run(playwright: Playwright,link,bookname,skip = 0,skip_page = 0) -> None:
     context.close()
     browser.close()
 
-
+link = 'https://www.linovelib.com/novel/0/1.html'
+bookname = 'tmp'
 with sync_playwright() as playwright:
-    run(playwright,'https://www.linovelib.com/novel/3095/catalog','败北女角太多了!',1)
+    if len(sys.argv) > 1:
+        link = sys.argv[1]
+    if len(sys.argv) > 2:
+        bookname = sys.argv[2]
+    run(playwright,link,bookname)
+
+    # os.run('python txt_to_epub.py '+bookname)
+    
