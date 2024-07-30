@@ -4,3 +4,5 @@
 !.gitattributes
 !.*.py
 !*.md
+playwright/.auth
+novel_login.py
